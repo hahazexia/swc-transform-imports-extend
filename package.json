@@ -1,0 +1,17 @@
+{
+    "name": "swc-transform-imports-extend",
+    "version": "0.0.1",
+    "description": "SWC plugin for https://www.npmjs.com/package/babel-plugin-transform-imports",
+    "main": "swc_plugin_transform_imports_extend.wasm",
+    "scripts": {
+      "prepack": "cp ./target/wasm32-wasi/release/swc_plugin_transform_imports_extend.wasm ."
+    },
+    "author": "hahazexia",
+    "keywords": [],
+    "license": "Apache-2.0",
+    "preferUnplugged": true,
+    "dependencies": {
+      "@swc/counter": "^0.1.3"
+    }
+  }
+  
