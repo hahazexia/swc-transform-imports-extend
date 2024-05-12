@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+// use std::fs::OpenOptions;
+// use std::io::Write;
 
 use convert_case::{Case, Casing};
 use handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContext};
@@ -24,7 +26,7 @@ pub struct Config {
 pub struct PackageConfig {
     pub style: Option<Transform>,
     pub transform: Transform,
-    pub name_transform: Option<String>,
+    pub casetype: Option<String>,
     #[serde(default)]
     pub prevent_full_import: bool,
     #[serde(default)]
@@ -148,17 +150,32 @@ impl<'a> Rewriter<'a> {
     }
 
     fn apply_name_transform(&self, name: &str) -> String {
-        match &self.config.name_transform {
+        // // 创建日志文件
+        // let mut file = OpenOptions::new()
+        //     .create(true)
+        //     .append(true)
+        //     .open("log.txt")
+        //     .expect("Unable to open log file");
+    
+        // // 在日志文件中写入输入参数
+        // writeln!(file, "Input: {}, casetype: {:?}", name, self.config.casetype).expect("Unable to write to log file");
+
+        let result = match &self.config.casetype {
             Some(transform) => {
                 match transform.as_str() {
                     "lowercase" => name.to_lowercase(),
                     "uppercase" => name.to_uppercase(),
-                    // 添加其他转换规则，例如 "camelCase"、"kebab-case" 等
+                    // 其他转换规则
                     _ => name.to_string(),
                 }
             }
             None => name.to_string(),
-        }
+        };
+    
+        // 在日志文件中写入返回值
+        // writeln!(file, "Output: {}", result).expect("Unable to write to log file");
+    
+        result
     }
 
     fn new_style_path(&self, name_str: Option<&str>) -> Atom {
