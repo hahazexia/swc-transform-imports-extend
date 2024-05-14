@@ -1,12 +1,14 @@
 use std::collections::HashMap;
 // use std::fs::OpenOptions;
 // use std::io::Write;
+use std::path::Path;
 
 use convert_case::{Case, Casing};
 use handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContext};
 use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use swc_atoms::Atom;
 use swc_cached::regex::CachedRegex;
 use swc_common::DUMMY_SP;
@@ -27,6 +29,7 @@ pub struct PackageConfig {
     pub style: Option<Transform>,
     pub transform: Transform,
     pub casetype: Option<String>,
+    pub preset: Option<Value>,
     #[serde(default)]
     pub prevent_full_import: bool,
     #[serde(default)]
@@ -156,7 +159,7 @@ impl<'a> Rewriter<'a> {
         //     .append(true)
         //     .open("log.txt")
         //     .expect("Unable to open log file");
-    
+
         // // 在日志文件中写入输入参数
         // writeln!(file, "Input: {}, casetype: {:?}", name, self.config.casetype).expect("Unable to write to log file");
 
@@ -171,10 +174,10 @@ impl<'a> Rewriter<'a> {
             }
             None => name.to_string(),
         };
-    
+
         // 在日志文件中写入返回值
         // writeln!(file, "Output: {}", result).expect("Unable to write to log file");
-    
+
         result
     }
 
@@ -184,32 +187,36 @@ impl<'a> Rewriter<'a> {
         if let Some(name_str) = name_str {
             ctx.insert("member", CtxData::Plain(name_str));
         }
-    
-        let new_path = match &self.config.style { // 修改：使用 self.config.style
+
+        let new_path = match &self.config.style {
+            // 修改：使用 self.config.style
             Some(style) => match style {
-                Transform::String(s) => self.renderer.render_template(&s, &ctx).unwrap_or_else(|e| {
-                    panic!("error rendering template for '{}': {}", self.key, e);
-                }),
+                Transform::String(s) => {
+                    self.renderer.render_template(&s, &ctx).unwrap_or_else(|e| {
+                        panic!("error rendering template for '{}': {}", self.key, e);
+                    })
+                }
                 Transform::Vec(v) => {
                     let mut result: Option<String> = None;
-        
+
                     // We iterate over the items to find the first match
                     v.iter().any(|(k, val)| {
                         let mut key = k.to_string();
                         if !key.starts_with('^') && !key.ends_with('$') {
                             key = format!("^{}$", key);
                         }
-        
+
                         let mut ctx_with_member_matches: HashMap<&str, CtxData> = HashMap::new();
                         ctx_with_member_matches.insert("matches", CtxData::Array(&self.group[..]));
-        
+
                         if let Some(name_str) = name_str {
                             ctx_with_member_matches.insert("member", CtxData::Plain(name_str));
                         }
-                        let regex = CachedRegex::new(&key).expect("transform-imports: invalid regex");
+                        let regex =
+                            CachedRegex::new(&key).expect("transform-imports: invalid regex");
                         if let Some(name_str) = name_str {
                             let group = regex.captures(name_str);
-        
+
                             if let Some(group) = group {
                                 let group = group
                                     .iter()
@@ -218,7 +225,7 @@ impl<'a> Rewriter<'a> {
                                     .clone();
                                 ctx_with_member_matches
                                     .insert("memberMatches", CtxData::Array(&group[..]));
-        
+
                                 result = Some(
                                     self.renderer
                                         .render_template(val, &ctx_with_member_matches)
@@ -229,7 +236,7 @@ impl<'a> Rewriter<'a> {
                                             );
                                         }),
                                 );
-        
+
                                 true
                             } else {
                                 false
@@ -238,7 +245,7 @@ impl<'a> Rewriter<'a> {
                             false
                         }
                     });
-        
+
                     if let Some(result) = result {
                         result
                     } else {
@@ -248,12 +255,12 @@ impl<'a> Rewriter<'a> {
                         );
                     }
                 }
-            }
+            },
             None => "".to_string(),
         };
-    
+
         let new_path = DUP_SLASH_REGEX.replace_all(&new_path, |_: &Captures| "/");
-    
+
         new_path.into()
     }
 
@@ -332,34 +339,77 @@ impl<'a> Rewriter<'a> {
                         })
                         .unwrap_or_else(|| named_spec.local.as_ref());
 
-                    let transformed_name = self.apply_name_transform(name_str);
-                    let new_path = self.new_path(Some(&transformed_name));
-                    let new_style_path = self.new_style_path(Some(&transformed_name));
-                    let specifier = if self.config.skip_default_conversion {
-                        ImportSpecifier::Named(named_spec.clone())
+                    // 新增：处理 preset 配置
+                    if let Some(preset) = &self.config.preset {
+                        let js_path = preset["jsPath"].as_object().unwrap();
+                        let css_path = preset["cssPath"].as_object().unwrap();
+
+                        let js_import_path = js_path.get(name_str).and_then(Value::as_str);
+                        let css_import_path = css_path.get(name_str).and_then(Value::as_str);
+
+                        if let Some(js_path) = js_import_path {
+                            let js_path = Path::new(&self.key)
+                                .join("lib")
+                                .join(js_path.trim_start_matches("./"))
+                                .to_str()
+                                .unwrap()
+                                .to_string();
+                            out.push(ImportDecl {
+                                specifiers: vec![ImportSpecifier::Named(named_spec.clone())],
+                                src: Box::new(Str::from(js_path)),
+                                span: old_decl.span,
+                                type_only: false,
+                                with: None,
+                                phase: Default::default(),
+                            });
+                        }
+
+                        if let Some(css_path) = css_import_path {
+                            let css_path = Path::new(&self.key)
+                                .join("lib")
+                                .join(css_path.trim_start_matches("./"))
+                                .to_str()
+                                .unwrap()
+                                .to_string();
+                            out.push(ImportDecl {
+                                specifiers: vec![],
+                                src: Box::new(Str::from(css_path)),
+                                span: old_decl.span,
+                                type_only: false,
+                                with: None,
+                                phase: Default::default(),
+                            });
+                        }
                     } else {
-                        ImportSpecifier::Default(ImportDefaultSpecifier {
-                            local: named_spec.local.clone(),
-                            span: named_spec.span,
-                        })
-                    };
-                    out.push(ImportDecl {
-                        specifiers: vec![specifier],
-                        src: Box::new(Str::from(new_path.as_ref())),
-                        span: old_decl.span,
-                        type_only: false,
-                        with: None,
-                        phase: Default::default(),
-                    });
-                    if !new_style_path.is_empty() {
+                        let transformed_name = self.apply_name_transform(name_str);
+                        let new_path = self.new_path(Some(&transformed_name));
+                        let new_style_path = self.new_style_path(Some(&transformed_name));
+                        let specifier = if self.config.skip_default_conversion {
+                            ImportSpecifier::Named(named_spec.clone())
+                        } else {
+                            ImportSpecifier::Default(ImportDefaultSpecifier {
+                                local: named_spec.local.clone(),
+                                span: named_spec.span,
+                            })
+                        };
                         out.push(ImportDecl {
-                            specifiers: vec![],
-                            src: Box::new(Str::from(new_style_path.as_ref())),
+                            specifiers: vec![specifier],
+                            src: Box::new(Str::from(new_path.as_ref())),
                             span: old_decl.span,
                             type_only: false,
                             with: None,
                             phase: Default::default(),
                         });
+                        if !new_style_path.is_empty() {
+                            out.push(ImportDecl {
+                                specifiers: vec![],
+                                src: Box::new(Str::from(new_style_path.as_ref())),
+                                span: old_decl.span,
+                                type_only: false,
+                                with: None,
+                                phase: Default::default(),
+                            });
+                        }
                     }
                 }
                 _ => {

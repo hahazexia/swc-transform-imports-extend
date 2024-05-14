@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use serde_json::json;
 
 use modularize_imports::{modularize_imports, PackageConfig};
 use swc_ecma_parser::{EsConfig, Syntax};
@@ -23,9 +24,29 @@ fn modularize_imports_fixture(input: PathBuf) {
                     (
                         "@tencent/met-ui".to_string(),
                         PackageConfig {
-                            name_transform: Some("lowercase".to_string()),
+                            casetype: Some("lowercase".to_string()),
+                            preset: None,
                             transform: "@tencent/met-ui/lib/{{member}}".into(),
                             style: Some("@tencent/met-ui/lib/{{member}}/style/index.css".into()), // 修改：显式地将 &str 转换为 Option<Transform>
+                            prevent_full_import: false,
+                            skip_default_conversion: true,
+                        },
+                    ),
+                    (
+                        "@tencent/met-component".to_string(),
+                        PackageConfig {
+                            casetype: None,
+                            transform: "".into(),
+                            style: None,
+                            preset: Some(json!({
+                                "jsPath": {
+                                    "Account": "account",
+                                    "useTranslation": "met-i18n"
+                                },
+                                "cssPath": {
+                                    "Account": "account/style/index.css"
+                                }
+                            })),
                             prevent_full_import: false,
                             skip_default_conversion: true,
                         },
@@ -35,7 +56,8 @@ fn modularize_imports_fixture(input: PathBuf) {
                         PackageConfig {
                             transform: "react-bootstrap/lib/{{member}}".into(),
                             style: None,
-                            name_transform: None,
+                            casetype: None,
+                            preset: None,
                             prevent_full_import: false,
                             skip_default_conversion: false,
                         },
@@ -45,7 +67,8 @@ fn modularize_imports_fixture(input: PathBuf) {
                         PackageConfig {
                             transform: "my-library/{{ matches.[1] }}/{{member}}".into(),
                             style: None,
-                            name_transform: None,
+                            casetype: None,
+                            preset: None,
                             prevent_full_import: false,
                             skip_default_conversion: false,
                         },
@@ -55,7 +78,8 @@ fn modularize_imports_fixture(input: PathBuf) {
                         PackageConfig {
                             transform: "my-library-2/{{ camelCase member }}".into(),
                             style: None,
-                            name_transform: None,
+                            casetype: None,
+                            preset: None,
                             prevent_full_import: false,
                             skip_default_conversion: true,
                         },
@@ -65,7 +89,8 @@ fn modularize_imports_fixture(input: PathBuf) {
                         PackageConfig {
                             transform: "my-library-3/{{ kebabCase member }}".into(),
                             style: None,
-                            name_transform: None,
+                            casetype: None,
+                            preset: None,
                             prevent_full_import: false,
                             skip_default_conversion: true,
                         },
@@ -93,7 +118,8 @@ fn modularize_imports_fixture(input: PathBuf) {
                             ])
                             .into(),
                             style: None,
-                            name_transform: None,
+                            casetype: None,
+                            preset: None,
                             prevent_full_import: false,
                             skip_default_conversion: true,
                         },
