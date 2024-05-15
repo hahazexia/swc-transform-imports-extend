@@ -30,6 +30,7 @@ pub struct PackageConfig {
     pub transform: Transform,
     pub casetype: Option<String>,
     pub preset: Option<Value>,
+    pub side_effect_position: Option<String>,
     #[serde(default)]
     pub prevent_full_import: bool,
     #[serde(default)]
@@ -455,18 +456,26 @@ impl Fold for FoldImports {
 
     fn fold_module(&mut self, mut module: Module) -> Module {
         let mut new_items: Vec<ModuleItem> = vec![];
+        let mut before_items: Vec<ModuleItem> = vec![];
+        let mut after_items: Vec<ModuleItem> = vec![];
+        let mut non_import_items = Vec::new();
         for item in module.body {
             match item {
                 ModuleItem::ModuleDecl(ModuleDecl::Import(decl)) => {
                     match self.should_rewrite(&decl.src.value) {
                         Some(rewriter) => {
                             let rewritten = rewriter.rewrite_import(&decl);
-                            new_items.extend(
-                                rewritten
-                                    .into_iter()
-                                    .map(ModuleDecl::Import)
-                                    .map(ModuleItem::ModuleDecl),
-                            );
+
+                            let mut rewritten_items = rewritten
+                                .into_iter()
+                                .map(ModuleDecl::Import)
+                                .map(ModuleItem::ModuleDecl);
+
+                            match rewriter.config.side_effect_position.as_deref() {
+                                Some("before") => before_items.extend(&mut rewritten_items),
+                                Some("after") => after_items.extend(&mut rewritten_items),
+                                _ => new_items.extend(&mut rewritten_items),
+                            }
                         }
                         None => new_items.push(ModuleItem::ModuleDecl(ModuleDecl::Import(decl))),
                     }
@@ -507,11 +516,14 @@ impl Fold for FoldImports {
                     }
                 }
                 _ => {
-                    new_items.push(item);
+                    non_import_items.push(item);
                 }
             }
         }
-        module.body = new_items;
+        before_items.extend(new_items);
+        before_items.extend(after_items);
+        before_items.extend(non_import_items);
+        module.body = before_items;
         module
     }
 }

@@ -21,6 +21,7 @@ swc plugin for babel-plugin-transform-imports and extend
                             "transform": "@hahazexia/my-ui-name/lib/{{member}}",
                             "style": "@hahazexia/my-ui-name/lib/{{member}}/style/index.css",
                             "skipDefaultConversion": true,
+                            "sideEffectPosition": "after"
                         },
                         "@hahazexia/my-component": {
                             "transform": "",
@@ -52,8 +53,8 @@ import { SomeComponent } from "@hahazexia/my-component";
 will compile to this:
 
 ```js
-import { Button } from "@hahazexia/my-ui-name/lib/button";
-import "@hahazexia/my-ui-name/lib/button/style/index.css";
 import { SomeComponent } from "@hahazexia/my-component/lib/some-component";
 import "@hahazexia/my-component/lib/some-component/style/index.css";
+import { Button } from "@hahazexia/my-ui-name/lib/button";
+import "@hahazexia/my-ui-name/lib/button/style/index.css";
 ```

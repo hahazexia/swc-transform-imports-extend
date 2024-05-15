@@ -30,6 +30,7 @@ fn modularize_imports_fixture(input: PathBuf) {
                             style: Some("@tencent/met-ui/lib/{{member}}/style/index.css".into()), // 修改：显式地将 &str 转换为 Option<Transform>
                             prevent_full_import: false,
                             skip_default_conversion: true,
+                            side_effect_position: Some("after".to_string()),
                         },
                     ),
                     (
@@ -49,6 +50,7 @@ fn modularize_imports_fixture(input: PathBuf) {
                             })),
                             prevent_full_import: false,
                             skip_default_conversion: true,
+                            side_effect_position: None,
                         },
                     ),
                     (
@@ -60,6 +62,7 @@ fn modularize_imports_fixture(input: PathBuf) {
                             preset: None,
                             prevent_full_import: false,
                             skip_default_conversion: false,
+                            side_effect_position: None,
                         },
                     ),
                     (
@@ -71,6 +74,7 @@ fn modularize_imports_fixture(input: PathBuf) {
                             preset: None,
                             prevent_full_import: false,
                             skip_default_conversion: false,
+                            side_effect_position: None,
                         },
                     ),
                     (
@@ -82,6 +86,7 @@ fn modularize_imports_fixture(input: PathBuf) {
                             preset: None,
                             prevent_full_import: false,
                             skip_default_conversion: true,
+                            side_effect_position: None,
                         },
                     ),
                     (
@@ -93,6 +98,7 @@ fn modularize_imports_fixture(input: PathBuf) {
                             preset: None,
                             prevent_full_import: false,
                             skip_default_conversion: true,
+                            side_effect_position: None,
                         },
                     ),
                     (
@@ -122,6 +128,7 @@ fn modularize_imports_fixture(input: PathBuf) {
                             preset: None,
                             prevent_full_import: false,
                             skip_default_conversion: true,
+                            side_effect_position: None,
                         },
                     ),
                 ]
