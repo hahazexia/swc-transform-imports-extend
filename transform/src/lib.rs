@@ -31,6 +31,7 @@ pub struct PackageConfig {
     pub casetype: Option<String>,
     pub preset: Option<Value>,
     pub side_effect_position: Option<String>,
+    pub library_directory: Option<String>,
     #[serde(default)]
     pub prevent_full_import: bool,
     #[serde(default)]
@@ -350,7 +351,7 @@ impl<'a> Rewriter<'a> {
 
                         if let Some(js_path) = js_import_path {
                             let js_path = Path::new(&self.key)
-                                .join("lib")
+                                .join(&self.config.library_directory.as_deref().unwrap_or("lib"))
                                 .join(js_path.trim_start_matches("./"))
                                 .to_str()
                                 .unwrap()
@@ -367,7 +368,7 @@ impl<'a> Rewriter<'a> {
 
                         if let Some(css_path) = css_import_path {
                             let css_path = Path::new(&self.key)
-                                .join("lib")
+                                .join(&self.config.library_directory.as_deref().unwrap_or("lib"))
                                 .join(css_path.trim_start_matches("./"))
                                 .to_str()
                                 .unwrap()
