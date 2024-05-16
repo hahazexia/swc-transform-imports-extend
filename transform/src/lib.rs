@@ -183,7 +183,7 @@ impl<'a> Rewriter<'a> {
         result
     }
 
-    fn new_style_path(&self, name_str: Option<&str>) -> Atom {
+    fn new_style_path(&self, name_str: Option<&str>) -> Vec<Atom> {
         let mut ctx: HashMap<&str, CtxData> = HashMap::new();
         ctx.insert("matches", CtxData::Array(&self.group[..]));
         if let Some(name_str) = name_str {
@@ -194,15 +194,16 @@ impl<'a> Rewriter<'a> {
             // 修改：使用 self.config.style
             Some(style) => match style {
                 Transform::String(s) => {
-                    self.renderer.render_template(&s, &ctx).unwrap_or_else(|e| {
+                    let res = self.renderer.render_template(&s, &ctx).unwrap_or_else(|e| {
                         panic!("error rendering template for '{}': {}", self.key, e);
-                    })
+                    });
+                    vec![Atom::from(res)]
                 }
                 Transform::Vec(v) => {
-                    let mut result: Option<String> = None;
+                    let mut result: Vec<Atom> = Vec::new();
 
                     // We iterate over the items to find the first match
-                    v.iter().any(|(k, val)| {
+                    for (k, val) in v.iter() {
                         let mut key = k.to_string();
                         if !key.starts_with('^') && !key.ends_with('$') {
                             key = format!("^{}$", key);
@@ -228,7 +229,7 @@ impl<'a> Rewriter<'a> {
                                 ctx_with_member_matches
                                     .insert("memberMatches", CtxData::Array(&group[..]));
 
-                                result = Some(
+                                result.push(Atom::from(
                                     self.renderer
                                         .render_template(val, &ctx_with_member_matches)
                                         .unwrap_or_else(|e| {
@@ -237,33 +238,41 @@ impl<'a> Rewriter<'a> {
                                                 self.key, e
                                             );
                                         }),
-                                );
-
-                                true
+                                ));
                             } else {
-                                false
+                                break;
                             }
                         } else {
-                            false
+                            break;
                         }
-                    });
-
-                    if let Some(result) = result {
-                        result
-                    } else {
-                        panic!(
-                            "missing style for import '{:?}' of package '{}'",
-                            name_str, self.key
-                        );
                     }
+
+                    // if let Some(result) = result {
+                    //     result
+                    // } else {
+                    //     panic!(
+                    //         "missing style for import '{:?}' of package '{}'",
+                    //         name_str, self.key
+                    //     );
+                    // }
+                    result
                 }
             },
-            None => "".to_string(),
+            None => Vec::new(),
         };
 
-        let new_path = DUP_SLASH_REGEX.replace_all(&new_path, |_: &Captures| "/");
+        // let new_path = DUP_SLASH_REGEX.replace_all(&new_path, |_: &Captures| "/");
 
-        new_path.into()
+        let new_path = new_path
+            .iter()
+            .map(|s| {
+                let s = s.as_ref();
+                let s = DUP_SLASH_REGEX.replace_all(s, "/");
+                Atom::from(s.to_string())
+            })
+            .collect::<Vec<Atom>>();
+
+        new_path
     }
 
     fn rewrite_export(&self, old_decl: &NamedExport) -> Vec<NamedExport> {
@@ -385,7 +394,7 @@ impl<'a> Rewriter<'a> {
                     } else {
                         let transformed_name = self.apply_name_transform(name_str);
                         let new_path = self.new_path(Some(&transformed_name));
-                        let new_style_path = self.new_style_path(Some(&transformed_name));
+                        let new_style_paths = self.new_style_path(Some(&transformed_name));
                         let specifier = if self.config.skip_default_conversion {
                             ImportSpecifier::Named(named_spec.clone())
                         } else {
@@ -402,16 +411,26 @@ impl<'a> Rewriter<'a> {
                             with: None,
                             phase: Default::default(),
                         });
-                        if !new_style_path.is_empty() {
+                        // if !new_style_paths.is_empty() {
+                        // out.push(ImportDecl {
+                        //     specifiers: vec![],
+                        //     src: Box::new(Str::from(new_style_path.as_ref())),
+                        //     span: old_decl.span,
+                        //     type_only: false,
+                        //     with: None,
+                        //     phase: Default::default(),
+                        // });
+                        for style_path in new_style_paths {
                             out.push(ImportDecl {
                                 specifiers: vec![],
-                                src: Box::new(Str::from(new_style_path.as_ref())),
+                                src: Box::new(Str::from(style_path.as_ref())),
                                 span: old_decl.span,
                                 type_only: false,
                                 with: None,
                                 phase: Default::default(),
                             });
                         }
+                        // }
                     }
                 }
                 _ => {
