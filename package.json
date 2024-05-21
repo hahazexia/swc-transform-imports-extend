@@ -10,6 +10,10 @@
     "keywords": [],
     "license": "Apache-2.0",
     "preferUnplugged": true,
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/hahazexia/swc-transform-imports-extend"
+    },
     "dependencies": {
         "@swc/counter": "^0.1.3"
     }
