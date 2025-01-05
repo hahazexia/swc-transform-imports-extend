@@ -2,9 +2,9 @@
     "name": "swc-transform-imports-extend",
     "version": "0.0.9",
     "description": "SWC plugin for https://www.npmjs.com/package/babel-plugin-transform-imports",
-    "main": "swc_plugin_transform_imports_extend.wasm",
+    "main": "swc_transform_imports_extend.wasm",
     "scripts": {
-        "prepack": "cp ./target/wasm32-wasi/release/swc_plugin_transform_imports_extend.wasm ."
+        "prepack": "cargo build --release -p swc_transform_imports_extend --target wasm32-wasi && cp ./target/wasm32-wasi/release/swc_transform_imports_extend.wasm ."
     },
     "author": "hahazexia",
     "keywords": [

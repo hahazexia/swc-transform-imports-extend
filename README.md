@@ -2,7 +2,12 @@
 
 swc plugin for babel-plugin-transform-imports and extend
 
-# example
+## dependencies
+
+[cargo-wasi](https://crates.io/crates/cargo-wasi)
+[swc_cli](https://crates.io/crates/swc_cli)
+
+## example
 
 ```json
 {

@@ -2,12 +2,12 @@ use std::path::PathBuf;
 use serde_json::json;
 
 use modularize_imports::{modularize_imports, PackageConfig};
-use swc_ecma_parser::{EsConfig, Syntax};
+use swc_ecma_parser::{EsSyntax, Syntax};
 use swc_ecma_transforms_testing::{test_fixture, FixtureTestConfig};
 use testing::fixture;
 
 fn syntax() -> Syntax {
-    Syntax::Es(EsConfig {
+    Syntax::Es(EsSyntax {
         jsx: true,
         ..Default::default()
     })
@@ -27,11 +27,13 @@ fn modularize_imports_fixture(input: PathBuf) {
                             casetype: Some("lowercase".to_string()),
                             preset: None,
                             transform: "@tencent/met-ui/lib/{{member}}".into(),
-                            style: Some("@tencent/met-ui/lib/{{member}}/style/index.css".into()), // 修改：显式地将 &str 转换为 Option<Transform>
+                            style: Some("@tencent/met-ui/lib/{{member}}/style/index.css".into()),
                             prevent_full_import: false,
                             skip_default_conversion: true,
                             library_directory: None,
                             side_effect_position: Some("after".to_string()),
+                            handle_default_import: true,
+                            handle_namespace_import: true,
                         },
                     ),
                     (
@@ -53,17 +55,21 @@ fn modularize_imports_fixture(input: PathBuf) {
                             skip_default_conversion: true,
                             library_directory: None,
                             side_effect_position: None,
+                            handle_default_import: true,
+                            handle_namespace_import: true,
                         },
                     ),
                     (
                         "react-bootstrap".to_string(),
                         PackageConfig {
                             transform: "react-bootstrap/lib/{{member}}".into(),
+                            prevent_full_import: false,
+                            skip_default_conversion: false,
+                            handle_default_import: true,
+                            handle_namespace_import: true,
                             style: None,
                             casetype: None,
                             preset: None,
-                            prevent_full_import: false,
-                            skip_default_conversion: false,
                             library_directory: None,
                             side_effect_position: None,
                         },
@@ -72,11 +78,13 @@ fn modularize_imports_fixture(input: PathBuf) {
                         "my-library/?(((\\w*)?/?)*)".to_string(),
                         PackageConfig {
                             transform: "my-library/{{ matches.[1] }}/{{member}}".into(),
+                            prevent_full_import: false,
+                            skip_default_conversion: false,
+                            handle_default_import: true,
+                            handle_namespace_import: true,
                             style: None,
                             casetype: None,
                             preset: None,
-                            prevent_full_import: false,
-                            skip_default_conversion: false,
                             library_directory: None,
                             side_effect_position: None,
                         },
@@ -85,11 +93,13 @@ fn modularize_imports_fixture(input: PathBuf) {
                         "my-library-2".to_string(),
                         PackageConfig {
                             transform: "my-library-2/{{ camelCase member }}".into(),
+                            prevent_full_import: false,
+                            skip_default_conversion: true,
+                            handle_default_import: true,
+                            handle_namespace_import: true,
                             style: None,
                             casetype: None,
                             preset: None,
-                            prevent_full_import: false,
-                            skip_default_conversion: true,
                             library_directory: None,
                             side_effect_position: None,
                         },
@@ -98,11 +108,13 @@ fn modularize_imports_fixture(input: PathBuf) {
                         "my-library-3".to_string(),
                         PackageConfig {
                             transform: "my-library-3/{{ kebabCase member }}".into(),
+                            prevent_full_import: false,
+                            skip_default_conversion: true,
+                            handle_default_import: true,
+                            handle_namespace_import: true,
                             style: None,
                             casetype: None,
                             preset: None,
-                            prevent_full_import: false,
-                            skip_default_conversion: true,
                             library_directory: None,
                             side_effect_position: None,
                         },
@@ -129,11 +141,43 @@ fn modularize_imports_fixture(input: PathBuf) {
                                 ),
                             ])
                             .into(),
+                            prevent_full_import: false,
+                            skip_default_conversion: true,
+                            handle_default_import: true,
+                            handle_namespace_import: true,
                             style: None,
                             casetype: None,
                             preset: None,
+                            library_directory: None,
+                            side_effect_position: None,
+                        },
+                    ),
+                    (
+                        "my-(module-namespace|default|mixed-(named|star))".to_string(),
+                        PackageConfig {
+                            transform: "transformed-{{matches.[1]}}".into(),
                             prevent_full_import: false,
                             skip_default_conversion: true,
+                            handle_default_import: true,
+                            handle_namespace_import: true,
+                            style: None,
+                            casetype: None,
+                            preset: None,
+                            library_directory: None,
+                            side_effect_position: None,
+                        },
+                    ),
+                    (
+                        "^(\\..*)(\\.tsx?)$".to_string(),
+                        PackageConfig {
+                            transform: "{{matches.[1]}}.js".into(),
+                            prevent_full_import: false,
+                            skip_default_conversion: false,
+                            handle_default_import: false,
+                            handle_namespace_import: false,
+                            style: None,
+                            casetype: None,
+                            preset: None,
                             library_directory: None,
                             side_effect_position: None,
                         },
